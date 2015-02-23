@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="com.clairvoyant.workshop.invertedindex-1.0">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/com.clairvoyant.workshop.invertedindex/target/com.clairvoyant.workshop.invertedindex-1.0.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

@@ -1,0 +1,8 @@
+<coordinator-app name="logs_processor_coordinator" frequency="${coord:hours(12)}"  start="${coordstartTime}" end="${coordendTime}" timezone="${coordTimeZone}" xmlns="uri:oozie:coordinator:0.1">
+   <action>
+      <workflow>
+         <app-path>${wfPath}</app-path>
+      </workflow>
+   </action>     
+</coordinator-app>
+

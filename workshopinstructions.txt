@@ -1,0 +1,70 @@
+Step 1: Download and unzip the required material to Download folder on your VM
+
+-- ----------------------------------------------------------
+
+Step 2: Move input data to hdfs:
+
+cd /home/cloudera/Downloads/ooziedatapipeline/com.clairvoyant.workshop/
+sudo -su hdfs hadoop fs -ls /user/cloudera/
+sudo -su hdfs hadoop fs -mkdir /user/cloudera/workshop/
+sudo -su hdfs hadoop fs -put data/ /user/cloudera/workshop/
+sudo -su hdfs hadoop fs -chown -R cloudera:supergroup /user/cloudera
+sudo -su cloudera hadoop fs -chmod -R 777 /user/cloudera/
+
+-- ---------------------------------------------
+
+Step 3: Run ProcessLogs MapReduce without Oozie
+
+hadoop jar /home/cloudera/Downloads/ooziedatapipeline/com.clairvoyant.workshop/workshop-processlogs.jar com.clairvoyant.workshop.processlogs.ProcessLogsDriver /user/cloudera/workshop/data/input/processlogs /user/cloudera/workshop/data/output/processlogs/output
+
+-- --------------------------------------------
+
+Step 4: View MapReduce Output
+sudo -su hdfs hadoop fs -ls /user/cloudera/workshop/data/output/processlogs/output
+sudo -su hdfs hadoop fs -cat /user/cloudera/workshop/data/output/processlogs/output/part-r-00000
+-- -------------------------------------------------------------------------------------
+
+Step 5: Move MR, Pig, Hive code and workflows to HDFS
+
+hadoop fs -mkdir /user/cloudera/oozie
+hadoop fs -mkdir /user/cloudera/oozie/apps
+hadoop fs -mkdir /user/cloudera/oozie/apps/logs_processor
+hadoop fs -mkdir /user/cloudera/oozie/apps/logs_processor/lib
+
+sudo -su hdfs hadoop fs -put /home/cloudera/Downloads/ooziedatapipeline/com.clairvoyant.workshop/workshop-processlogs.jar /user/cloudera/oozie/apps/logs_processor/lib
+sudo -su hdfs hadoop fs -put /home/cloudera/Downloads/logs_processor_wf/workflow-master.xml /user/cloudera/oozie/apps/logs_processor/
+sudo -su hdfs hadoop fs -put /home/cloudera/Downloads/logs_processor_wf/load_temp_logsprocesser_table.sql /user/cloudera/oozie/apps/logs_processor/
+sudo -su hdfs hadoop fs -put /home/cloudera/Downloads/logs_processor_wf/logs.pig /user/cloudera/oozie/apps/logs_processor/
+sudo -su hdfs hadoop fs -put /home/cloudera/Downloads/logs_processor_wf/coordinator /user/cloudera/oozie/apps/logs_processor/
+
+-- ----------------------------------------------------------------------------------------------
+
+Step 6: create a location for Hive Table(Data)
+sudo -su hdfs hadoop fs -mkdir /user/cloudera/oozie/apps/logs_processor/data
+sudo -su hdfs hadoop fs -mkdir /user/cloudera/oozie/apps/logs_processor/data/logs_processor
+
+-- ------------------------------------------------------------------------------------
+
+Step 7: Place a copy of hive configuration files in HDFS.
+
+cp /etc/hive/conf/hive-default.xml.template /etc/hive/conf/hive-default.xml
+sudo -su hdfs hadoop fs -put /etc/hive/conf/ /user/cloudera/oozie/apps/logs_processor/
+
+-- ------------------------------------------------------------------------
+
+Step 9: Run, view Info, kill oozie job commands
+
+oozie job -oozie http://localhost:11000/oozie -config /home/cloudera/Downloads/logs_processor_wf/job.properties -run
+oozie job -oozie http://localhost:11000/oozie -info 0000001-150218100158956-oozie-oozi-W(replace it with your job id)
+
+-- only if you want to kill your job -- 
+oozie job -oozie http://localhost:11000/oozie -kill 0000002-150217110550066-oozie-oozi-W(replace it with your job id)
+
+
+-- -------------------------------------------------------
+
+
+
+
+
+

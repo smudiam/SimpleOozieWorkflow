@@ -1,0 +1,159 @@
+<workflow-app xmlns="uri:oozie:workflow:0.2" name ="LogsProcessor">
+
+	<start to="check_mapreduce_output_exists" />
+
+	<decision name="check_mapreduce_output_exists">
+        <switch>
+            <case to="delete_mapreduce_output_folder">
+                ${fs:isDir(LOGSPROCESSOR_MAPREDUCE_OUTPUTPATH)}
+            </case>
+	       <default to="LogsProcessor-MapReduce-Invoker"/>
+        </switch>
+    </decision>
+
+	<action name="delete_mapreduce_output_folder">
+        <fs>
+            <delete path="${LOGSPROCESSOR_MAPREDUCE_OUTPUTPATH}"/>
+        </fs>
+        <ok to="LogsProcessor-MapReduce-Invoker"/>
+        <error to="fail"/>
+    </action>
+
+	<action name ="LogsProcessor-MapReduce-Invoker">
+		<map-reduce>
+			<job-tracker>${jobTracker}</job-tracker>
+			<name-node>${nameNode}</name-node>
+			<configuration>
+ 		     <property>
+                    <name>mapred.mapper.new-api</name>
+                    <value>true</value>
+                </property>
+		      <property>
+                    <name>mapred.reducer.new-api</name>
+                    <value>true</value>
+                </property>
+				<!-- MAPPER CONFIGURATIONS -->
+ 		     <property>
+                <name>mapred.job.queue.name</name>
+                <value>${queueName}</value>
+            </property>
+            <property>
+                <name>mapreduce.inputformat.class</name>
+                <value>org.apache.hadoop.mapreduce.lib.input.TextInputFormat</value>
+            </property>
+	       <property>
+                <name>mapreduce.outputformat.class</name>
+                <value>org.apache.hadoop.mapreduce.lib.output.TextOutputFormat</value>
+            </property>
+            <property>
+                <name>mapred.mapoutput.key.class</name>
+                <value>org.apache.hadoop.io.Text</value>
+            </property>
+            <property>
+                <name>mapred.mapoutput.value.class</name>
+                <value>org.apache.hadoop.io.Text</value>
+            </property>
+            <property>
+                <name>mapreduce.map.class</name>
+                <value>com.clairvoyant.workshop.processlogs.ProcessLogsMapper</value>
+            </property>
+            <property>
+                <name>mapreduce.reduce.class</name>
+                <value>com.clairvoyant.workshop.processlogs.ProcessLogsReducer</value>
+            </property>
+		      <property>
+			<name>mapred.input.dir</name>
+			<value>${LOGSPROCESSOR_MAPREDUCE_INPUTPATH}</value>
+		  </property>
+		  <property>
+			<name>mapred.output.dir</name>
+			<value>${LOGSPROCESSOR_MAPREDUCE_OUTPUTPATH}</value>
+		  </property>
+		</configuration>
+		</map-reduce>
+
+		<ok to="check_pig_output_folder_exists"/>
+		<error to="fail"/>
+	</action>
+
+	<decision name="check_pig_output_folder_exists">
+        <switch>
+            <case to="delete_pig_output_table">
+                ${fs:isDir(LOGSPROCESSOR_PIG_OUTPUTPATH)}
+            </case>
+	   <default to="pig_logs_processor"/>
+        </switch>
+    </decision>
+
+	<action name="delete_pig_output_table">
+        <fs>
+            <delete path="${LOGSPROCESSOR_PIG_OUTPUTPATH}"/>
+        </fs>
+        <ok to="pig_logs_processor"/>
+        <error to="fail"/>
+    </action>
+
+	<action name="pig_logs_processor">
+        <pig>
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <prepare>
+                <delete path="${LOGSPROCESSOR_MAPREDUCE_OUTPUTPATH}/_SUCCESS"/>
+            </prepare>
+            <configuration>
+                <property>
+                    <name>mapred.job.queue.name</name>
+                    <value>${queueName}</value>
+                </property>
+                <property>
+                    <name>mapred.compress.map.output</name>
+                    <value>false</value>
+                </property>
+            </configuration>
+            <script>logs.pig</script>
+            <param>LOGSPROCESSOR_PIG_INPUTPATH=${LOGSPROCESSOR_PIG_INPUTPATH}</param>
+            <param>LOGSPROCESSOR_PIG_OUTPUTPATH=${LOGSPROCESSOR_PIG_OUTPUTPATH}</param>
+        </pig>
+        <ok to="delete_pigjob_successflag"/>
+        <error to="fail"/>
+    </action>
+
+	<action name="delete_pigjob_successflag">
+        <fs>
+            <delete path="${LOGSPROCESSOR_PIG_OUTPUTPATH}/_SUCCESS"/>
+        </fs>
+        <ok to="hive_logs_processor"/>
+        <error to="fail"/>
+    	</action>
+    
+    <action name="hive_logs_processor">
+        <hive xmlns="uri:oozie:hive-action:0.2">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <job-xml>${hiveConfigSiteXml}</job-xml>
+            <configuration>
+                <property>
+                    <name>mapred.job.queue.name</name>
+                    <value>${queueName}</value>
+                </property>
+                <property>
+                    <name>oozie.hive.defaults</name>
+                    <value>${hiveConfigDefaultXml}</value>
+                </property>
+            </configuration>
+            <script>load_temp_logsprocesser_table.sql</script>
+        </hive>
+        <ok to="end"/>
+        <error to="fail"/>
+    </action>
+
+	<kill name="fail">
+		<message>LogsProcessor workflow failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+	</kill>
+
+	<end name="end"/>
+
+</workflow-app>
+
+
+
